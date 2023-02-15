@@ -118,79 +118,48 @@ app.post("/todos/", async (request, response) => {
 });
 
 // API 4
-const hasAllValues = (todoParams) => {
-  return (
-    todoParams.todo !== undefined &&
-    todoParams.priority !== undefined &&
-    todoParams.status !== undefined
-  );
-};
-const hasJustTodo = (todoParams) => {
-  return todoParams.todo !== undefined;
-};
-const hasPriority = (todoParams) => {
-  return todoParams.priority !== undefined;
-};
-const hasJustStatus = (todoParams) => {
-  return todoParams.status !== undefined;
-};
-
 app.put("/todos/:todoId/", async (request, response) => {
-  let queryToUpdatePerId = "";
-  const { todo, priority, status } = request.body;
   const { todoId } = request.params;
+  let updateColumn = "";
+  const requestBody = request.body;
   switch (true) {
-    case hasAllValues(request.body):
-      queryToUpdatePerId = `
-        UPDATE 
-            todo
-        SET
-            todo = '${todo}',
-            priority = '${priority}',
-            status = '${status}'
-        WHERE id = '${todoId}'`;
-      response.send("Updated");
+    case requestBody.status !== undefined:
+      updateColumn = "Status";
       break;
-    case hasJustTodo(request.body):
-      queryToUpdatePerId = `
-        UPDATE 
-            todo
-        SET
-            todo = '${todo}'
-        WHERE id = '${todoId}'`;
-      response.send("Todo Updated");
+    case requestBody.priority !== undefined:
+      updateColumn = "Priority";
       break;
-    case hasPriority(request.body):
-      queryToUpdatePerId = `
-        UPDATE 
-            todo
-        SET
-            priority = ${priority}
-        WHERE id = ${todoId}`;
-      response.send("Priority Updated");
+    case requestBody.todo !== undefined:
+      updateColumn = "Todo";
       break;
-    case hasJustStatus(request.body):
-      queryToUpdatePerId = `
-        UPDATE 
-            todo
-        SET
-            status = '${status}'
-        WHERE 
-        id = ${todoId}`;
-      response.send("Status Updated");
-      break;
-    default:
-      queryToUpdatePerId = `
-        UPDATE 
-            todo
-        SET
-            todo = '${todo.todo}',
-            priority = '${todo.priority}',
-            status = '${todo.status}'
-        WHERE id = '${todoId}'`;
-      response.send("Updated");
   }
-  await database.run(queryToUpdatePerId);
+  const previousTodoQuery = `
+    SELECT
+      *
+    FROM
+      todo
+    WHERE 
+      id = ${todoId};`;
+  const previousTodo = await database.get(previousTodoQuery);
+
+  const {
+    todo = previousTodo.todo,
+    priority = previousTodo.priority,
+    status = previousTodo.status,
+  } = request.body;
+
+  const updateTodoQuery = `
+    UPDATE
+      todo
+    SET
+      todo='${todo}',
+      priority='${priority}',
+      status='${status}'
+    WHERE
+      id = ${todoId};`;
+
+  await database.run(updateTodoQuery);
+  response.send(`${updateColumn} Updated`);
 });
 
 // API 5
